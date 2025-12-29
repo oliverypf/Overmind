@@ -42,14 +42,98 @@ export class CombatTargeting {
 	}
 
 	/**
-	 * Standard target-finding logic
+	 * Standard target-finding logic with enhanced tactical considerations
 	 */
 	static findTarget(zerg: Zerg, targets = zerg.room.hostiles): Creep | undefined {
 		return maxBy(targets, function(hostile) {
 			if (hostile.hitsPredicted == undefined) hostile.hitsPredicted = hostile.hits;
 			if (hostile.pos.lookForStructure(STRUCTURE_RAMPART)) return false;
-			return hostile.hitsMax - hostile.hitsPredicted + CombatIntel.getHealPotential(hostile)
-				   - 10 * zerg.pos.getMultiRoomRangeTo(hostile.pos); // compute score
+
+			let score = hostile.hitsMax - hostile.hitsPredicted;
+
+			// Priority 1: Healers are high-value targets
+			const healParts = hostile.getActiveBodyparts(HEAL);
+			if (healParts > 0) {
+				score += 500 + healParts * 50; // Significant bonus for healers
+			}
+
+			// Priority 2: Focus fire on targets being healed by nearby healers
+			const nearbyHostiles = _.filter(targets, h => h.pos.inRangeTo(hostile, 3) && h.id !== hostile.id);
+			const nearbyHealers = _.filter(nearbyHostiles, h => h.getActiveBodyparts(HEAL) > 0);
+			if (nearbyHealers.length > 0) {
+				score += 200 * nearbyHealers.length; // Bonus for targets with healer support (focus fire)
+			}
+
+			// Priority 3: Low health targets - easier to kill
+			const healthPercent = hostile.hits / hostile.hitsMax;
+			if (healthPercent < 0.3) {
+				score += 400; // Finishing blow bonus
+			} else if (healthPercent < 0.5) {
+				score += 200;
+			}
+
+			// Priority 4: Ranged attackers are dangerous
+			const rangedParts = hostile.getActiveBodyparts(RANGED_ATTACK);
+			if (rangedParts > 0) {
+				score += rangedParts * 30;
+			}
+
+			// Add heal potential to score (harder to kill = lower priority unless healer)
+			score += CombatIntel.getHealPotential(hostile) * (healParts > 0 ? 2 : 0.5);
+
+			// Distance penalty
+			score -= 10 * zerg.pos.getMultiRoomRangeTo(hostile.pos);
+
+			return score;
+		});
+	}
+
+	/**
+	 * Find best target for focus fire (all creeps attack same target)
+	 */
+	static findFocusFireTarget(friendlies: Zerg[], targets?: Creep[]): Creep | undefined {
+		if (!targets) {
+			const firstFriendly = friendlies[0];
+			targets = firstFriendly && firstFriendly.room ? firstFriendly.room.hostiles : [];
+		}
+		if (targets.length === 0 || friendlies.length === 0) return undefined;
+
+		return maxBy(targets, function(hostile) {
+			if (hostile.hitsPredicted == undefined) hostile.hitsPredicted = hostile.hits;
+			if (hostile.pos.lookForStructure(STRUCTURE_RAMPART)) return false;
+
+			let score = 0;
+
+			// Calculate if we can kill this target with focus fire
+			const totalDPS = _.sum(friendlies, f => {
+				const attackDmg = CombatIntel.getAttackDamage(f.creep);
+				const rangedDmg = CombatIntel.getRangedAttackDamage(f.creep);
+				return attackDmg + rangedDmg;
+			});
+
+			const enemyHealRate = CombatIntel.maxHostileHealingTo(hostile);
+
+			// Can we overcome their healing?
+			if (totalDPS > enemyHealRate) {
+				score += 1000; // High priority if we can kill them
+			}
+
+			// Healers first
+			if (hostile.getActiveBodyparts(HEAL) > 0) {
+				score += 500;
+			}
+
+			// Low health targets
+			const healthPercent = hostile.hits / hostile.hitsMax;
+			if (healthPercent < 0.4) {
+				score += 300;
+			}
+
+			// Average distance from all friendlies
+			const avgDistance = _.sum(friendlies, f => f.pos.getRangeTo(hostile)) / friendlies.length;
+			score -= avgDistance * 20;
+
+			return score;
 		});
 	}
 

@@ -97,14 +97,98 @@ export class CombatPlanner {
 	}
 
 	private static computeHitsToSpawn(room: Room): number {
-		// TODO
-		return 0;
+		const hostiles = room.hostiles;
+		if (hostiles.length === 0) {
+			return 0;
+		}
+
+		const enemyPotentials = CombatIntel.getCombatPotentials(hostiles);
+		let refPos: RoomPosition | undefined;
+		if (room.spawns[0]) {
+			refPos = room.spawns[0].pos;
+		} else if (room.controller) {
+			refPos = room.controller.pos;
+		} else {
+			const myCreeps = room.find(FIND_MY_CREEPS);
+			if (myCreeps[0]) {
+				refPos = myCreeps[0].pos;
+			}
+		}
+		const towerDamage = room.towers.length > 0 && refPos
+			? CombatIntel.towerDamageAtPos(refPos, true)
+			: 0;
+
+		// Calculate needed DPS to overcome enemy healing
+		const neededDPS = enemyPotentials.heal * HEAL_POWER * 1.5;
+
+		// Calculate needed HPS to survive enemy damage + tower damage
+		const enemyDamage = enemyPotentials.attack * ATTACK_POWER +
+							enemyPotentials.rangedAttack * RANGED_ATTACK_POWER;
+		const neededHPS = (enemyDamage + towerDamage) * 1.2;
+
+		// Estimate number of body parts needed
+		const rangedPartsNeeded = Math.ceil(neededDPS / RANGED_ATTACK_POWER);
+		const healPartsNeeded = Math.ceil(neededHPS / HEAL_POWER);
+
+		// Return total hits (parts * 100 hp each)
+		return (rangedPartsNeeded + healPartsNeeded) * 100;
 	}
 
+	/**
+	 * Calculate the forces needed to counter a threat
+	 */
+	static getNeededPotentials(threat: Threat): CombatPotentials {
+		if (!threat.potentials) {
+			return {attack: 0, rangedAttack: 0, heal: 0};
+		}
 
-	// private getNeededPotentials(): CombatPotentials {
-	// 	// TODO
-	// }
+		const enemyPotentials = threat.potentials;
+
+		// We need enough DPS to overcome their healing
+		const neededRangedAttack = Math.ceil(enemyPotentials.heal * 1.5);
+
+		// We need enough healing to survive their damage
+		const neededHeal = Math.ceil((enemyPotentials.attack + enemyPotentials.rangedAttack) * 1.2);
+
+		// Some melee for finishing off targets
+		const neededAttack = Math.ceil(enemyPotentials.heal * 0.5);
+
+		return {
+			attack: neededAttack,
+			rangedAttack: neededRangedAttack,
+			heal: neededHeal,
+		};
+	}
+
+	/**
+	 * Determine if current forces can handle a threat
+	 */
+	static canHandleThreat(threat: Threat, availableCreeps: CombatZerg[]): boolean {
+		const needed = this.getNeededPotentials(threat);
+		const current = CombatIntel.getCombatPotentials(availableCreeps.map(z => z.creep));
+
+		return current.attack >= needed.attack * 0.8 &&
+			   current.rangedAttack >= needed.rangedAttack * 0.8 &&
+			   current.heal >= needed.heal * 0.8;
+	}
+
+	/**
+	 * Calculate how many creeps of each type are needed
+	 */
+	static getCreepCountsNeeded(threat: Threat): {melee: number, ranged: number, healers: number} {
+		const needed = this.getNeededPotentials(threat);
+
+		// Assume standard creep configurations
+		const meleePartsPerCreep = 15;      // Average ATTACK parts per zergling
+		const rangedPartsPerCreep = 8;      // Average RANGED_ATTACK parts per hydralisk
+		const healPartsPerCreep = 15;       // Average HEAL parts per transfuser
+
+		return {
+			melee: Math.ceil(needed.attack / meleePartsPerCreep),
+			ranged: Math.ceil(needed.rangedAttack / rangedPartsPerCreep),
+			healers: Math.ceil(needed.heal / healPartsPerCreep),
+		};
+	}
 
 	private spawnNeededCreeps() {
 

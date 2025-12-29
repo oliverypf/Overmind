@@ -1,14 +1,15 @@
-import {assimilationLocked} from '../assimilation/decorator';
-import {Colony, getAllColonies} from '../Colony';
-import {log} from '../console/log';
-import {DirectiveColonize} from '../directives/colony/colonize';
-import {Autonomy, getAutonomyLevel, Mem} from '../memory/Memory';
-import {Pathing} from '../movement/Pathing';
-import {profile} from '../profiler/decorator';
-import {Cartographer} from '../utilities/Cartographer';
-import {maxBy} from '../utilities/utils';
-import {MAX_OWNED_ROOMS, SHARD3_MAX_OWNED_ROOMS} from '../~settings';
-import {MIN_EXPANSION_DISTANCE} from './ExpansionEvaluator';
+import { assimilationLocked } from '../assimilation/decorator';
+import { Colony, getAllColonies } from '../Colony';
+import { log } from '../console/log';
+import { DirectiveColonize } from '../directives/colony/colonize';
+import { Autonomy, getAutonomyLevel, Mem } from '../memory/Memory';
+import { Pathing } from '../movement/Pathing';
+import { profile } from '../profiler/decorator';
+import { Cartographer } from '../utilities/Cartographer';
+import { maxBy } from '../utilities/utils';
+import { MAX_OWNED_ROOMS, SHARD3_MAX_OWNED_ROOMS } from '../~settings';
+import { CpuBudgetManager } from '../utilities/CpuBudgetManager';
+import { MIN_EXPANSION_DISTANCE } from './ExpansionEvaluator';
 
 
 const CHECK_EXPANSION_FREQUENCY = 1000;
@@ -41,15 +42,19 @@ export class ExpansionPlanner implements IExpansionPlanner {
 
 	private handleExpansion(): void {
 		const allColonies = getAllColonies();
+
+		// Calculate expansion limits
+		const gclLimit = Game.gcl.level;
+		const cpuLimit = CpuBudgetManager.maxColonies;
+		const maxOwnedRooms = Game.shard.name == 'shard3' ? Math.max(SHARD3_MAX_OWNED_ROOMS, cpuLimit) : MAX_OWNED_ROOMS;
+
+		const effectiveLimit = Math.min(gclLimit, maxOwnedRooms, cpuLimit);
+
+		log.info(`Expansion Check: Current=${allColonies.length} | Limits: GCL=${gclLimit}, CPU=${cpuLimit} (limit: ${Game.cpu.limit}), Max=${maxOwnedRooms} | Effective=${effectiveLimit}`);
+
 		// If you already have max number of colonies, ignore
-		if (allColonies.length >= Math.min(Game.gcl.level, MAX_OWNED_ROOMS)) {
+		if (allColonies.length >= effectiveLimit) {
 			return;
-		}
-		// If you are on shard3, limit to 3 owned rooms // TODO: use CPU-based limiting metric
-		if (Game.shard.name == 'shard3') {
-			if (allColonies.length >= SHARD3_MAX_OWNED_ROOMS) {
-				return;
-			}
 		}
 
 		const roomName = this.chooseNextColonyRoom();
@@ -87,7 +92,7 @@ export class ExpansionPlanner implements IExpansionPlanner {
 
 	private getBestExpansionRoomFor(colony: Colony): { roomName: string, score: number } | undefined {
 		const allColonyRooms = _.zipObject(_.map(getAllColonies(),
-											   col => [col.room.name, true])) as { [roomName: string]: boolean };
+			col => [col.room.name, true])) as { [roomName: string]: boolean };
 		const allOwnedMinerals = _.map(getAllColonies(), col => col.room.mineral!.mineralType) as MineralConstant[];
 		let bestRoom: string = '';
 		let bestScore: number = -Infinity;
@@ -112,8 +117,8 @@ export class ExpansionPlanner implements IExpansionPlanner {
 				}
 				// Reward new minerals and catalyst rooms
 				const mineralType = Memory.rooms[roomName][_RM.MINERAL]
-								  ? Memory.rooms[roomName][_RM.MINERAL]![_RM_MNRL.MINERALTYPE]
-								  : undefined;
+					? Memory.rooms[roomName][_RM.MINERAL]![_RM_MNRL.MINERALTYPE]
+					: undefined;
 				if (mineralType) {
 					if (!allOwnedMinerals.includes(mineralType)) {
 						score += UNOWNED_MINERAL_BONUS;
@@ -123,14 +128,14 @@ export class ExpansionPlanner implements IExpansionPlanner {
 					}
 				}
 				// Update best choices
-				if (score > bestScore && Game.map.isRoomAvailable(roomName)) {
+				if (score > bestScore && Game.map.getRoomStatus(roomName).status !== 'closed') {
 					bestScore = score;
 					bestRoom = roomName;
 				}
 			}
 		}
 		if (bestRoom != '') {
-			return {roomName: bestRoom, score: bestScore};
+			return { roomName: bestRoom, score: bestScore };
 		}
 	}
 

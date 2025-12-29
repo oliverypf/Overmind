@@ -1,13 +1,13 @@
-import {log} from '../console/log';
-import {profile} from '../profiler/decorator';
-import {Stats} from '../stats/stats';
-import {isIVM} from '../utilities/utils';
-import {DEFAULT_OPERATION_MODE, DEFAULT_OVERMIND_SIGNATURE, PROFILER_COLONY_LIMIT, USE_PROFILER} from '../~settings';
+import { log } from '../console/log';
+import { profile } from '../profiler/decorator';
+import { Stats } from '../stats/stats';
+import { isIVM } from '../utilities/utils';
+import { DEFAULT_OPERATION_MODE, DEFAULT_OVERMIND_SIGNATURE, PROFILER_COLONY_LIMIT, USE_PROFILER } from '../~settings';
 
 export enum Autonomy {
-	Manual        = 0,
+	Manual = 0,
 	SemiAutomatic = 1,
-	Automatic     = 2,
+	Automatic = 2,
 }
 
 export function getAutonomyLevel(): number {
@@ -20,7 +20,7 @@ export function getAutonomyLevel(): number {
 			return Autonomy.Automatic;
 		default:
 			log.warning(`ERROR: ${Memory.settings.operationMode} is not a valid operation mode! ` +
-						`Defaulting to ${DEFAULT_OPERATION_MODE}; use setMode() to change.`);
+				`Defaulting to ${DEFAULT_OPERATION_MODE}; use setMode() to change.`);
 			Memory.settings.operationMode = DEFAULT_OPERATION_MODE;
 			return getAutonomyLevel();
 	}
@@ -31,8 +31,8 @@ let lastTime: number = 0;
 
 const MAX_BUCKET = 10000;
 const HEAP_CLEAN_FREQUENCY = 200;
-const BUCKET_CLEAR_CACHE = 7000;
-const BUCKET_CPU_HALT = 4000;
+const BUCKET_CLEAR_CACHE = 5000;
+const BUCKET_CPU_HALT = 500;  // Only halt at very low bucket - buildings need maintenance!
 
 /**
  * This module contains a number of low-level memory clearing and caching functions
@@ -49,19 +49,19 @@ export class Mem {
 		if (USE_PROFILER && Game.time % 10 == 0) {
 			log.warning(`Profiling is currently enabled; only ${PROFILER_COLONY_LIMIT} colonies will be run!`);
 		}
-		if (Game.cpu.bucket < 500) {
+		// Only pause at extremely low bucket - we need to maintain buildings!
+		if (Game.cpu.bucket < 50) {
 			if (_.keys(Game.spawns).length > 1 && !Memory.resetBucket && !Memory.haltTick) {
-				// don't run CPU reset routine at very beginning or if it's already triggered
 				log.warning(`CPU bucket is critically low (${Game.cpu.bucket})! Starting CPU reset routine.`);
 				Memory.resetBucket = true;
-				Memory.haltTick = Game.time + 1; // reset global next tick
+				Memory.haltTick = Game.time + 1;
 			} else {
-				log.info(`CPU bucket is too low (${Game.cpu.bucket}). Postponing operation until bucket reaches 500.`);
+				log.info(`CPU bucket is too low (${Game.cpu.bucket}). Postponing operation until bucket reaches 200.`);
 			}
 			shouldRun = false;
 		}
 		if (Memory.resetBucket) {
-			if (Game.cpu.bucket < MAX_BUCKET - Game.cpu.limit) {
+			if (Game.cpu.bucket < 200) {
 				log.info(`Operation suspended until bucket recovery. Bucket: ${Game.cpu.bucket}/${MAX_BUCKET}`);
 				shouldRun = false;
 			} else {
@@ -109,7 +109,7 @@ export class Mem {
 			const start = Game.cpu.getUsed();
 			global.gc(quick);
 			log.debug(`Running ${quick ? 'quick' : 'FULL'} garbage collection. ` +
-					  `Elapsed time: ${Game.cpu.getUsed() - start}.`);
+				`Elapsed time: ${Game.cpu.getUsed() - start}.`);
 		} else {
 			log.debug(`Manual garbage collection is unavailable on this server.`);
 		}
@@ -164,8 +164,8 @@ export class Mem {
 			Memory.pathing = {} as PathingMemory; // Hacky workaround
 		}
 		_.defaults(Memory.pathing, {
-			paths            : {},
-			distances        : {},
+			paths: {},
+			distances: {},
 			weightedDistances: {},
 		});
 	}
@@ -195,9 +195,9 @@ export class Mem {
 			delete Memory.profiler;
 		}
 		_.defaults(Memory.settings, {
-			signature    : DEFAULT_OVERMIND_SIGNATURE,
+			signature: DEFAULT_OVERMIND_SIGNATURE,
 			operationMode: DEFAULT_OPERATION_MODE,
-			log          : {},
+			log: {},
 			enableVisuals: true,
 		});
 		if (!Memory.stats) {
@@ -215,14 +215,14 @@ export class Mem {
 
 	private static initGlobalMemory() {
 		global._cache = <IGlobalCache>{
-			accessed     : {},
-			expiration   : {},
-			structures   : {},
-			numbers      : {},
-			lists        : {},
-			costMatrices : {},
+			accessed: {},
+			expiration: {},
+			structures: {},
+			numbers: {},
+			lists: {},
+			costMatrices: {},
 			roomPositions: {},
-			things       : {},
+			things: {},
 		};
 	}
 

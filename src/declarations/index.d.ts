@@ -35,6 +35,15 @@ interface Game {
 	// directives: { [name: string]: any };
 }
 
+interface RoomStatus {
+	status: 'normal' | 'closed' | 'novice' | 'respawn';
+	timestamp: number | null;
+}
+
+interface GameMap {
+	getRoomStatus(roomName: string): RoomStatus;
+}
+
 
 interface IGlobalCache {
 	accessed: { [key: string]: number };

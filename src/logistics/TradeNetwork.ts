@@ -2,6 +2,7 @@ import {assimilationLocked} from '../assimilation/decorator';
 import {log} from '../console/log';
 import {Mem} from '../memory/Memory';
 import {profile} from '../profiler/decorator';
+import {CpuBudgetManager} from '../utilities/CpuBudgetManager';
 import {alignedNewline, bullet, leftArrow, rightArrow} from '../utilities/stringConstants';
 import {maxBy, minBy, onPublicServer, printRoomName} from '../utilities/utils';
 
@@ -152,7 +153,7 @@ export class TraderJoe implements ITradeNetwork {
 	private effectivePrice(order: Order, terminal: StructureTerminal): number {
 		if (order.roomName) {
 			const transferCost = Game.market.calcTransactionCost(1000, order.roomName, terminal.room.name) / 1000;
-			const energyToCreditMultiplier = 0.01; // this.cache.sell[RESOURCE_ENERGY] * 1.5;
+			const energyToCreditMultiplier = this.getEnergyToCreditMultiplier();
 			return order.price + transferCost * energyToCreditMultiplier;
 		} else {
 			return Infinity;
@@ -165,7 +166,7 @@ export class TraderJoe implements ITradeNetwork {
 	private effectiveBuyPrice(order: Order, terminal: StructureTerminal): number {
 		if (order.roomName) {
 			const transferCost = Game.market.calcTransactionCost(1000, order.roomName, terminal.room.name) / 1000;
-			const energyToCreditMultiplier = 0.01; // this.cache.sell[RESOURCE_ENERGY] * 1.5;
+			const energyToCreditMultiplier = this.getEnergyToCreditMultiplier();
 			return order.price - transferCost * energyToCreditMultiplier;
 		} else {
 			return Infinity;
@@ -198,10 +199,12 @@ export class TraderJoe implements ITradeNetwork {
 	/**
 	 * Opportunistically sells resources when the buy price is higher than current market sell low price
 	 */
-	lookForGoodDeals(terminal: StructureTerminal, resource: ResourceConstant, margin = 1.25): void {
+	lookForGoodDeals(terminal: StructureTerminal, resource: ResourceConstant, margin?: number): void {
 		if (Game.market.credits < TraderJoe.settings.market.reserveCredits) {
 			return;
 		}
+		// Use dynamic margin based on stock level if not provided
+		const effectiveMargin = margin !== undefined ? margin : this.getDealMargin(resource, terminal);
 		let amount = 5000;
 		if (resource === RESOURCE_POWER) {
 			amount = 100;
@@ -216,7 +219,7 @@ export class TraderJoe implements ITradeNetwork {
 			return;
 		}
 		const order = maxBy(ordersForMineral, order => this.effectiveBuyPrice(order, terminal));
-		if (order && order.price > marketLow * margin) {
+		if (order && order.price > marketLow * effectiveMargin) {
 			const amount = Math.min(order.amount, 10000);
 			const cost = Game.market.calcTransactionCost(amount, terminal.room.name, order.roomName!);
 			if (terminal.store[RESOURCE_ENERGY] > cost) {
@@ -240,7 +243,7 @@ export class TraderJoe implements ITradeNetwork {
 		let ordersForMineral = Game.market.getAllOrders({resourceType: resource, type: ORDER_SELL});
 		ordersForMineral = _.filter(ordersForMineral, order => order.amount >= amount);
 		const bestOrder = minBy(ordersForMineral, (order: Order) => order.price);
-		let maxPrice = maxMarketPrices[resource] || maxMarketPrices.default;
+		let maxPrice = this.getMaxBuyPrice(resource);
 		if (!onPublicServer()) {
 			maxPrice = Infinity; // don't care about price limits if on private server
 		}
@@ -383,6 +386,99 @@ export class TraderJoe implements ITradeNetwork {
 	}
 
 	/**
+	 * Get dynamic max buy price based on current market data
+	 */
+	private getMaxBuyPrice(resource: ResourceConstant): number {
+		const cacheEntry = this.memory.cache.sell[resource];
+		const marketPrice = cacheEntry ? cacheEntry.low : undefined;
+		if (marketPrice && marketPrice !== Infinity && marketPrice > 0) {
+			return marketPrice * 1.5; // Allow up to 50% above market low price
+		}
+		return maxMarketPrices[resource] || maxMarketPrices.default; // Fallback to hardcoded defaults
+	}
+
+	/**
+	 * Get real-time energy to credit multiplier based on market data
+	 */
+	private getEnergyToCreditMultiplier(): number {
+		const energyCacheEntry = this.memory.cache.sell[RESOURCE_ENERGY];
+		const energyPrice = energyCacheEntry ? energyCacheEntry.low : undefined;
+		// Use real-time price if available and reasonable, otherwise use conservative default
+		if (energyPrice && energyPrice !== Infinity && energyPrice > 0 && energyPrice < 1) {
+			return energyPrice;
+		}
+		return 0.01; // Conservative default
+	}
+
+	/**
+	 * Get dynamic margin for deals based on current stock level
+	 */
+	private getDealMargin(resource: ResourceConstant, terminal: StructureTerminal): number {
+		const stock = terminal.store[resource] || 0;
+		if (stock > 50000) return 1.1;  // High stock - lower margin to sell faster
+		if (stock > 25000) return 1.2;  // Medium stock
+		return 1.25;  // Low stock - higher margin for better profits
+	}
+
+	/**
+	 * Look for arbitrage opportunities where buy orders are higher than sell orders
+	 * Buy from cheap sell order, sell to expensive buy order
+	 */
+	lookForArbitrageOpportunities(terminal: StructureTerminal): void {
+		if (terminal.cooldown > 0) return;
+		if (Game.market.credits < TraderJoe.settings.market.reserveCredits * 2) return;
+
+		// Only check arbitrage occasionally to save CPU
+		if (Game.time % 50 !== 0) return;
+
+		for (const resourceType in this.memory.cache.sell) {
+			const resource = resourceType as ResourceConstant;
+			const sellEntry = this.memory.cache.sell[resource];
+			const buyEntry = this.memory.cache.buy[resource];
+			const sellLow = sellEntry ? sellEntry.low : undefined;
+			const buyHigh = buyEntry ? buyEntry.high : undefined;
+
+			if (!sellLow || !buyHigh || sellLow === Infinity || buyHigh === 0) continue;
+
+			// Check if there's a profitable spread (buy price > sell price + costs)
+			const minProfitMargin = 0.1; // 10% minimum profit
+			if (buyHigh > sellLow * (1 + minProfitMargin)) {
+				// Found arbitrage opportunity!
+				const amount = 1000; // Small test amount
+
+				// Find the actual orders
+				const sellOrders = Game.market.getAllOrders({resourceType: resource, type: ORDER_SELL});
+				const buyOrders = Game.market.getAllOrders({resourceType: resource, type: ORDER_BUY});
+
+				const bestSellOrder = minBy(sellOrders, o => this.effectivePrice(o, terminal));
+				const bestBuyOrder = maxBy(buyOrders, o => this.effectiveBuyPrice(o, terminal));
+
+				if (!bestSellOrder || !bestBuyOrder) continue;
+
+				// Calculate total costs
+				const buyCost = bestSellOrder.price * amount;
+				const sellRevenue = bestBuyOrder.price * amount;
+				const transferCostBuy = bestSellOrder.roomName ?
+					Game.market.calcTransactionCost(amount, bestSellOrder.roomName, terminal.room.name) : 0;
+				const transferCostSell = bestBuyOrder.roomName ?
+					Game.market.calcTransactionCost(amount, terminal.room.name, bestBuyOrder.roomName) : 0;
+
+				const energyCost = (transferCostBuy + transferCostSell) * this.getEnergyToCreditMultiplier();
+				const profit = sellRevenue - buyCost - energyCost;
+
+				if (profit > 0 && terminal.store[RESOURCE_ENERGY] > transferCostBuy + transferCostSell + 1000) {
+					// Execute arbitrage: buy from sell order
+					const response = Game.market.deal(bestSellOrder.id, amount, terminal.room.name);
+					if (response === OK) {
+						this.notify(`Arbitrage ${resource}: bought at ${bestSellOrder.price}, will sell at ${bestBuyOrder.price}, profit: ${profit.toFixed(2)}`);
+					}
+					return; // One arbitrage per tick
+				}
+			}
+		}
+	}
+
+	/**
 	 * Pretty-prints transaction information in the console
 	 */
 	private logTransaction(order: Order, terminalRoomName: string, amount: number, response: number): void {
@@ -445,7 +541,8 @@ export class TraderJoe implements ITradeNetwork {
 
 
 	init(): void {
-		if (Game.time - (this.memory.cache.tick || 0) > TraderJoe.settings.cache.timeout) {
+		const cacheTimeout = CpuBudgetManager.getCacheTimeout();
+		if (Game.time - (this.memory.cache.tick || 0) > cacheTimeout) {
 			this.buildMarketCache();
 		}
 	}

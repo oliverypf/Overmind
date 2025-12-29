@@ -40,6 +40,12 @@ import _Overmind from './Overmind_obfuscated'; // this should be './Overmind_obf
 import {VersionMigration} from './versionMigration/migrator';
 import {RemoteDebugger} from './debug/remoteDebugger';
 import {ActionParser} from './reinforcementLearning/actionParser';
+import {CpuBudgetManager} from './utilities/CpuBudgetManager';
+import {PowerCreepManager} from './power/PowerCreepManager';
+import {HighwayScoutManager} from './intel/HighwayScoutManager';
+import {DiplomacyManager} from './diplomacy/DiplomacyManager';
+import {EarlyWarningSystem} from './intel/EarlyWarningSystem';
+import {InvasionPredictor} from './intel/InvasionPredictor';
 // =====================================================================================================================
 
 // Main loop
@@ -62,8 +68,23 @@ function main(): void {
 	// Tick loop cycle: initialize and run each component --------------------------------------------------------------
 	Overmind.init();												// Init phase: spawning and energy requests
 	Overmind.run();													// Run phase: execute state-changing actions
-	Overmind.visuals(); 											// Draw visuals
+	PowerCreepManager.run();										// Run PowerCreeps
+	DiplomacyManager.run();											// Run Diplomacy system
+	HighwayScoutManager.run();										// Scan highways for Power Banks and Deposits
+	EarlyWarningSystem.run();										// Monitor for incoming threats
+	InvasionPredictor.run();										// Analyze invasion patterns
+
+	// Only render visuals when CPU budget allows (skip when bucket is low)
+	if (CpuBudgetManager.shouldRenderVisuals()) {
+		Overmind.visuals(); 										// Draw visuals
+	}
+
 	Stats.run(); 													// Record statistics
+
+	// CPU optimization: convert excess CPU to Pixel when bucket is full -----------------------------------------------
+	if (Game.cpu.bucket === 10000 && (Game.cpu as any).generatePixel) {
+		(Game.cpu as any).generatePixel();
+	}
 
 	// Post-run code: handle sandbox code and error catching -----------------------------------------------------------
 	sandbox();														// Sandbox: run any testing code

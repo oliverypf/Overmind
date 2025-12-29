@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(tree:*)",
+      "Bash(npm install)",
+      "Bash(npm install:*)",
+      "Bash(npm run compile:*)",
+      "Bash(node --version:*)",
+      "WebSearch",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:api.github.com)",
+      "WebFetch(domain:docs.screeps.com)",
+      "WebFetch(domain:wiki.screepspl.us)",
+      "mcp__gemini-cli__ask-gemini",
+      "Bash(npm run push-main:*)",
+      "Bash(node -e:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

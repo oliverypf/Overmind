@@ -1,12 +1,12 @@
-import {CreepSetup} from '../../creepSetups/CreepSetup';
-import {CombatSetups, Roles} from '../../creepSetups/setups';
-import {DirectiveInvasionDefense} from '../../directives/defense/invasionDefense';
-import {CombatIntel} from '../../intel/CombatIntel';
-import {OverlordPriority} from '../../priorities/priorities_overlords';
-import {profile} from '../../profiler/decorator';
-import {boostResources} from '../../resources/map_resources';
-import {CombatZerg} from '../../zerg/CombatZerg';
-import {CombatOverlord} from '../CombatOverlord';
+import { CreepSetup } from '../../creepSetups/CreepSetup';
+import { CombatSetups, Roles } from '../../creepSetups/setups';
+import { DirectiveInvasionDefense } from '../../directives/defense/invasionDefense';
+import { CombatIntel } from '../../intel/CombatIntel';
+import { OverlordPriority } from '../../priorities/priorities_overlords';
+import { profile } from '../../profiler/decorator';
+import { boostResources } from '../../resources/map_resources';
+import { CombatZerg } from '../../zerg/CombatZerg';
+import { CombatOverlord } from '../CombatOverlord';
 
 /**
  * Spawns melee defenders to defend against incoming player invasions in an owned room
@@ -18,7 +18,7 @@ export class MeleeDefenseOverlord extends CombatOverlord {
 	room: Room;
 
 	static settings = {
-		retreatHitsPercent : 0.75,
+		retreatHitsPercent: 0.75,
 		reengageHitsPercent: 0.95,
 	};
 
@@ -26,7 +26,7 @@ export class MeleeDefenseOverlord extends CombatOverlord {
 		super(directive, 'meleeDefense', priority, 1);
 		this.zerglings = this.combatZerg(Roles.melee, {
 			boostWishlist: boosted ? [boostResources.tough[3], boostResources.attack[3], boostResources.move[3]]
-								   : undefined
+				: undefined
 		});
 	}
 
@@ -41,8 +41,9 @@ export class MeleeDefenseOverlord extends CombatOverlord {
 		const zerglingDamage = ATTACK_POWER * boostMultiplier * setup.getBodyPotential(ATTACK, this.colony);
 		const towerDamage = this.room.hostiles[0] ? CombatIntel.towerDamageAtPos(this.room.hostiles[0].pos) || 0 : 0;
 		const worstDamageMultiplier = _.min(_.map(this.room.hostiles,
-												creep => CombatIntel.minimumDamageTakenMultiplier(creep)));
-		return Math.ceil(.5 + 1.5 * healAmount / (worstDamageMultiplier * (zerglingDamage + towerDamage + 1)));
+			creep => CombatIntel.minimumDamageTakenMultiplier(creep)));
+		// Increase the multiplier from 1.5 to 2.5 to ensure we have enough firepower to break through healing
+		return Math.ceil(.5 + 2.5 * healAmount / (worstDamageMultiplier * (zerglingDamage + towerDamage + 1)));
 	}
 
 	init() {

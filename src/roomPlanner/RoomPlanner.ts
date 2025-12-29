@@ -335,10 +335,16 @@ export class RoomPlanner {
 		const dx = toPos.x - fromPos.x;
 		const dy = toPos.y - fromPos.y;
 		for (const structureType in map) {
+			const validPositions: RoomPosition[] = [];
 			for (const pos of map[structureType]) {
-				pos.x += dx;
-				pos.y += dy;
+				const newX = pos.x + dx;
+				const newY = pos.y + dy;
+				// Only keep positions within valid room bounds (0-49)
+				if (newX >= 0 && newX <= 49 && newY >= 0 && newY <= 49) {
+					validPositions.push(new RoomPosition(newX, newY, pos.roomName));
+				}
 			}
+			map[structureType] = validPositions;
 		}
 	}
 
@@ -358,12 +364,17 @@ export class RoomPlanner {
 		// Apply the rotation to the map
 		let offset, dx, dy;
 		for (const structureType in map) {
+			const validPositions: RoomPosition[] = [];
 			for (const pos of map[structureType]) {
 				offset = [pos.x - pivot.x, pos.y - pivot.y];
 				[dx, dy] = R(offset);
-				pos.x = pivot.x + dx;
-				pos.y = pivot.y + dy;
+				const newX = pivot.x + dx;
+				const newY = pivot.y + dy;
+				if (newX >= 0 && newX <= 49 && newY >= 0 && newY <= 49) {
+					validPositions.push(new RoomPosition(newX, newY, pos.roomName));
+				}
 			}
+			map[structureType] = validPositions;
 		}
 	}
 

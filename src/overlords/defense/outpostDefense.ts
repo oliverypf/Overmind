@@ -51,21 +51,23 @@ export class OutpostDefenseOverlord extends CombatOverlord {
 
 	private computeNeededHydraliskAmount(setup: CreepSetup, enemyRangedPotential: number): number {
 		const hydraliskPotential = setup.getBodyPotential(RANGED_ATTACK, this.colony);
+		if (hydraliskPotential <= 0) return 0;
 		// TODO: body potential from spawnGroup energy?
 		// let worstDamageMultiplier = CombatIntel.minimumDamageMultiplierForGroup(this.room.hostiles);
-		return Math.ceil(1.5 * enemyRangedPotential / hydraliskPotential);
+		return Math.min(10, Math.ceil(1.5 * enemyRangedPotential / hydraliskPotential));
 	}
 
-	// TODO: division by 0 error!
 	private computeNeededBroodlingAmount(setup: CreepSetup, enemyAttackPotential: number): number {
 		const broodlingPotential = setup.getBodyPotential(ATTACK, this.colony);
+		if (broodlingPotential <= 0) return 0;
 		// let worstDamageMultiplier = CombatIntel.minimumDamageMultiplierForGroup(this.room.hostiles);
-		return Math.ceil(1.5 * enemyAttackPotential / broodlingPotential);
+		return Math.min(10, Math.ceil(1.5 * enemyAttackPotential / broodlingPotential));
 	}
 
 	private computeNeededHealerAmount(setup: CreepSetup, enemyHealPotential: number): number {
 		const healerPotential = setup.getBodyPotential(HEAL, this.colony);
-		return Math.ceil(1.5 * enemyHealPotential / healerPotential);
+		if (healerPotential <= 0) return 0;
+		return Math.min(10, Math.ceil(1.5 * enemyHealPotential / healerPotential));
 	}
 
 	private getEnemyPotentials(): { attack: number, rangedAttack: number, heal: number } {

@@ -214,6 +214,24 @@ export class TerminalNetwork implements ITerminalNetwork {
 	}
 
 	/**
+	 * Calculate effective transfer amount after considering transport cost
+	 * Returns the net amount that will actually arrive at destination
+	 */
+	private effectiveTransferAmount(amount: number, sender: StructureTerminal, receiver: StructureTerminal): number {
+		const cost = Game.market.calcTransactionCost(amount, sender.room.name, receiver.room.name);
+		return amount - cost * 0.5; // Weight transport cost at 50% (energy has value)
+	}
+
+	/**
+	 * Calculate transport cost efficiency score (lower is better)
+	 * Returns the cost per unit transferred
+	 */
+	private getTransportCostScore(sender: StructureTerminal, receiver: StructureTerminal, amount: number): number {
+		const cost = Game.market.calcTransactionCost(amount, sender.room.name, receiver.room.name);
+		return cost / amount;
+	}
+
+	/**
 	 * Request resources from the terminal network, purchasing from market if unavailable and allowable
 	 */
 	requestResource(receiver: StructureTerminal, resourceType: ResourceConstant, amount: number,
@@ -226,7 +244,14 @@ export class TerminalNetwork implements ITerminalNetwork {
 										 terminal => (terminal.store[resourceType] || 0) > amount + minDifference &&
 													 terminal.cooldown == 0 && !this.alreadySent.includes(terminal) &&
 													 terminal.id != receiver.id);
-		const sender: StructureTerminal | undefined = maxBy(possibleSenders, t => (t.store[resourceType] || 0));
+
+		// Prefer sender with best combination of resources and low transport cost
+		const sender: StructureTerminal | undefined = maxBy(possibleSenders, t => {
+			const resourceScore = (t.store[resourceType] || 0);
+			const costScore = this.getTransportCostScore(t, receiver, amount);
+			// Balance resource availability against transport cost
+			return resourceScore - costScore * 1000;
+		});
 		if (sender) {
 			this.transfer(sender, receiver, resourceType, amount, 'resource request');
 		} else if (allowBuy) {

@@ -2,7 +2,7 @@
 
 import resolve from "rollup-plugin-node-resolve";
 import commonjs from "rollup-plugin-commonjs";
-import progress from "rollup-plugin-progress";
+// import progress from "rollup-plugin-progress"; // Disabled for Node.js v22 compatibility
 import typescript from "rollup-plugin-typescript2";
 import screeps from "rollup-plugin-screeps";
 
@@ -25,7 +25,7 @@ export default {
     input: "src/main.ts",
 
     plugins: [
-        progress({clearLine: true}),
+        // progress({clearLine: true}), // Disabled for Node.js v22 compatibility
         resolve(),
         commonjs({
                      namedExports: {

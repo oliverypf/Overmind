@@ -47,12 +47,14 @@ export class BunkerDefenseOverlord extends CombatOverlord {
 
 	init() {
 		this.reassignIdleCreeps(Roles.bunkerGuard);
+		const enemyCount = this.room.hostiles.length;
+		const guardCount = Math.max(1, Math.ceil(enemyCount / 2));
 		if (this.canBoostSetup(CombatSetups.bunkerGuard.boosted_T3)) {
 			const setup = CombatSetups.bunkerGuard.boosted_T3;
-			this.wishlist(1, setup);
+			this.wishlist(guardCount, setup);
 		} else {
 			const setup = CombatSetups.bunkerGuard.halfMove;
-			this.wishlist(1, setup);
+			this.wishlist(guardCount, setup);
 		}
 	}
 

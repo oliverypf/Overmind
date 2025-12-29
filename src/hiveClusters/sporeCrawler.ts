@@ -1,12 +1,12 @@
-import {$} from '../caching/GlobalCache';
-import {Colony} from '../Colony';
-import {log} from '../console/log';
-import {TERMINAL_STATE_REBUILD} from '../directives/terminalState/terminalState_rebuild';
-import {CombatIntel} from '../intel/CombatIntel';
-import {WorkerOverlord} from '../overlords/core/worker';
-import {profile} from '../profiler/decorator';
-import {CombatTargeting} from '../targeting/CombatTargeting';
-import {HiveCluster} from './_HiveCluster';
+import { $ } from '../caching/GlobalCache';
+import { Colony } from '../Colony';
+import { log } from '../console/log';
+import { TERMINAL_STATE_REBUILD } from '../directives/terminalState/terminalState_rebuild';
+import { CombatIntel } from '../intel/CombatIntel';
+import { WorkerOverlord } from '../overlords/core/worker';
+import { profile } from '../profiler/decorator';
+import { CombatTargeting } from '../targeting/CombatTargeting';
+import { HiveCluster } from './_HiveCluster';
 
 
 /**
@@ -18,7 +18,7 @@ export class SporeCrawler extends HiveCluster {
 	towers: StructureTower[];
 
 	static settings = {
-		requestThreshold       : 500,
+		requestThreshold: 500,
 		criticalEnergyThreshold: 250,
 	};
 
@@ -47,7 +47,7 @@ export class SporeCrawler extends HiveCluster {
 			if (tower.energy < SporeCrawler.settings.requestThreshold) {
 				const multiplier = tower.energy < SporeCrawler.settings.criticalEnergyThreshold ? 2 : 1;
 				const dAmountdt = this.room.hostiles.length > 0 ? 10 : 0;
-				this.colony.logisticsNetwork.requestInput(tower, {multiplier: multiplier, dAmountdt: dAmountdt});
+				this.colony.logisticsNetwork.requestInput(tower, { multiplier: multiplier, dAmountdt: dAmountdt });
 			}
 		}
 	}
@@ -121,21 +121,35 @@ export class SporeCrawler extends HiveCluster {
 			const myDefenders = _.filter(this.room.creeps, creep => creep.getActiveBodyparts(ATTACK) > 1);
 			const myRangedDefenders = _.filter(this.room.creeps, creep => creep.getActiveBodyparts(RANGED_ATTACK) > 1);
 			const myCreepDamage = ATTACK_POWER * _.sum(myDefenders, creep => CombatIntel.getAttackPotential(creep)) +
-								RANGED_ATTACK_POWER * _.sum(myRangedDefenders,
-															creep => CombatIntel.getRangedAttackPotential(creep));
+				RANGED_ATTACK_POWER * _.sum(myRangedDefenders,
+					creep => CombatIntel.getRangedAttackPotential(creep));
 			const HEAL_FUDGE_FACTOR = 1.0;
 			const avgHealing = HEAL_FUDGE_FACTOR * CombatIntel.avgHostileHealingTo(this.room.hostiles);
+
+			// Calculate damage potential for each hostile
 			let possibleTargets = _.filter(this.room.hostiles, hostile => {
-				// let healing = HEAL_FUDGE_FACTOR * CombatIntel.maxHostileHealingTo(hostile);
 				const damageTaken = CombatIntel.towerDamageAtPos(hostile.pos)! + myCreepDamage;
 				const damageMultiplier = CombatIntel.minimumDamageTakenMultiplier(hostile);
-				return damageTaken * damageMultiplier > avgHealing;
+				const healing = HEAL_FUDGE_FACTOR * CombatIntel.maxHostileHealingTo(hostile);
+
+				// Target if we can kill it
+				if (damageTaken * damageMultiplier > healing + hostile.hits) return true;
+
+				// Target if we can hurt it
+				if (damageTaken * damageMultiplier > healing) return true;
+
+				// Target if it's a significant threat or we have excess energy, even if we can't kill it immediately
+				// This applies pressure and drains their energy
+				if (this.towers[0].energy > TOWER_ENERGY_COST * 10) return true;
+
+				return false;
 			});
+
 			// Only attack dancing targets (drain attack) which are far enough in rooms to be killed off by towers
 			possibleTargets = _.filter(possibleTargets, hostile => {
 				if (CombatIntel.isEdgeDancing(hostile)) {
 					const netDPS = CombatIntel.towerDamageAtPos(hostile.pos)! + myCreepDamage
-								   - (HEAL_FUDGE_FACTOR * CombatIntel.maxHostileHealingTo(hostile));
+						- (HEAL_FUDGE_FACTOR * CombatIntel.maxHostileHealingTo(hostile));
 					const isKillable = netDPS * hostile.pos.rangeToEdge > hostile.hits;
 					if (isKillable) {
 						return true;
@@ -157,7 +171,7 @@ export class SporeCrawler extends HiveCluster {
 		}
 
 		const closestDamagedAlly = this.pos.findClosestByRange(_.filter(this.room.creeps,
-																	  creep => creep.hits < creep.hitsMax));
+			creep => creep.hits < creep.hitsMax));
 		if (closestDamagedAlly) {
 			for (const tower of this.towers) {
 				tower.heal(closestDamagedAlly);
@@ -167,7 +181,7 @@ export class SporeCrawler extends HiveCluster {
 
 		// Towers build nuke response ramparts
 		const nearbyNukeRamparts = _.filter(this.colony.overlords.work.nukeDefenseRamparts,
-										  rampart => this.pos.getRangeTo(rampart) <= TOWER_OPTIMAL_RANGE);
+			rampart => this.pos.getRangeTo(rampart) <= TOWER_OPTIMAL_RANGE);
 		if (nearbyNukeRamparts.length > 0 && this.colony.terminal
 			&& this.colony.terminalState != TERMINAL_STATE_REBUILD) {
 			const nukes = this.colony.room.find(FIND_NUKES);
