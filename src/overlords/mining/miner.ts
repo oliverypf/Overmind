@@ -1,17 +1,17 @@
-import {$} from '../../caching/GlobalCache';
-import {ColonyStage} from '../../Colony';
-import {log} from '../../console/log';
-import {bodyCost, CreepSetup} from '../../creepSetups/CreepSetup';
-import {Roles, Setups} from '../../creepSetups/setups';
-import {DirectiveOutpost} from '../../directives/colony/outpost';
-import {DirectiveHarvest} from '../../directives/resource/harvest';
-import {Pathing} from '../../movement/Pathing';
-import {OverlordPriority} from '../../priorities/priorities_overlords';
-import {profile} from '../../profiler/decorator';
-import {Cartographer, ROOMTYPE_SOURCEKEEPER} from '../../utilities/Cartographer';
-import {maxBy, minBy} from '../../utilities/utils';
-import {Zerg} from '../../zerg/Zerg';
-import {Overlord} from '../Overlord';
+import { $ } from '../../caching/GlobalCache';
+import { ColonyStage } from '../../Colony';
+import { log } from '../../console/log';
+import { bodyCost, CreepSetup } from '../../creepSetups/CreepSetup';
+import { Roles, Setups } from '../../creepSetups/setups';
+import { DirectiveOutpost } from '../../directives/colony/outpost';
+import { DirectiveHarvest } from '../../directives/resource/harvest';
+import { Pathing } from '../../movement/Pathing';
+import { OverlordPriority } from '../../priorities/priorities_overlords';
+import { profile } from '../../profiler/decorator';
+import { Cartographer, ROOMTYPE_SOURCEKEEPER } from '../../utilities/Cartographer';
+import { maxBy, minBy } from '../../utilities/utils';
+import { Zerg } from '../../zerg/Zerg';
+import { Overlord } from '../Overlord';
 
 export const StandardMinerSetupCost = bodyCost(Setups.drones.miners.standard.generateBody(Infinity));
 
@@ -45,7 +45,7 @@ export class MiningOverlord extends Overlord {
 	allowDropMining: boolean;
 
 	static settings = {
-		minLinkDistance : 10,
+		minLinkDistance: 10,
 		dropMineUntilRCL: 3,
 	};
 
@@ -82,7 +82,7 @@ export class MiningOverlord extends Overlord {
 		}
 		const miningPowerEach = this.setup.getBodyPotential(WORK, this.colony);
 		this.minersNeeded = Math.min(Math.ceil(this.miningPowerNeeded / miningPowerEach),
-									 this.pos.availableNeighbors(true).length);
+			this.pos.availableNeighbors(true).length);
 		// Allow drop mining at low levels
 		this.allowDropMining = this.colony.level < MiningOverlord.settings.dropMineUntilRCL;
 		if (this.mode != 'early' && !this.allowDropMining) {
@@ -90,7 +90,7 @@ export class MiningOverlord extends Overlord {
 				this.harvestPos = this.container.pos;
 			} else if (this.link) {
 				this.harvestPos = _.find(this.link.pos.availableNeighbors(true),
-										 pos => pos.getRangeTo(this) == 1)!;
+					pos => pos.getRangeTo(this) == 1)!;
 			} else {
 				this.harvestPos = this.calculateContainerPos();
 			}
@@ -162,6 +162,9 @@ export class MiningOverlord extends Overlord {
 				return;
 			}
 			log.info(`${this.print}: building container at ${containerPos.print}`);
+			if (Object.keys(Game.constructionSites).length >= 100) { // MAX_CONSTRUCTION_SITES
+				return;
+			}
 			const result = containerPos.createConstructionSite(STRUCTURE_CONTAINER);
 			if (result != OK) {
 				log.error(`${this.print}: cannot build container at ${containerPos.print}! Result: ${result}`);
@@ -186,7 +189,7 @@ export class MiningOverlord extends Overlord {
 			if (_.sum(this.container.store) > threshold * transportCapacity) {
 				this.colony.logisticsNetwork.requestOutput(this.container, {
 					resourceType: 'all',
-					dAmountdt   : this.energyPerTick
+					dAmountdt: this.energyPerTick
 				});
 			}
 		}
@@ -257,7 +260,7 @@ export class MiningOverlord extends Overlord {
 			// if you have multiple miners and the source is visible
 			const targetPos = this.harvestPos || this.source.pos;
 			const minersNearSource = _.filter(this.miners,
-											miner => miner.pos.getRangeTo(targetPos) <= SUICIDE_CHECK_FREQUENCY);
+				miner => miner.pos.getRangeTo(targetPos) <= SUICIDE_CHECK_FREQUENCY);
 			if (minersNearSource.length > this.minersNeeded) {
 				// if you have more miners by the source than you need
 				const oldestMiner = minBy(minersNearSource, miner => miner.ticksToLive || 9999);
@@ -354,7 +357,7 @@ export class MiningOverlord extends Overlord {
 
 	private handleMiner(miner: Zerg) {
 		// Flee hostiles
-		if (miner.flee(miner.room.fleeDefaults, {dropEnergy: true})) {
+		if (miner.flee(miner.room.fleeDefaults, { dropEnergy: true })) {
 			return;
 		}
 
@@ -365,7 +368,7 @@ export class MiningOverlord extends Overlord {
 			}
 		} else {
 			if (!miner.pos.inRangeToPos(this.harvestPos, 0)) {
-				return miner.goTo(this.harvestPos, {range: 0});
+				return miner.goTo(this.harvestPos, { range: 0 });
 			}
 		}
 

@@ -1,8 +1,8 @@
-import {log} from '../../console/log';
-import {PowerBankMinerOverlord} from '../../overlords/mining/powerBankMiner';
-import {OverlordPriority} from '../../priorities/priorities_overlords';
-import {profile} from '../../profiler/decorator';
-import {Directive} from '../Directive';
+import { log } from '../../console/log';
+import { PowerBankMinerOverlord } from '../../overlords/mining/powerBankMiner';
+import { OverlordPriority } from '../../priorities/priorities_overlords';
+import { profile } from '../../profiler/decorator';
+import { Directive } from '../Directive';
 
 interface DirectivePowerBankMemory extends FlagMemory {
 	power: number;
@@ -35,7 +35,7 @@ export class DirectivePowerBank extends Directive {
 	};
 
 	constructor(flag: Flag) {
-		super(flag);
+		super(flag, colony => colony.level >= 7);
 		// Initialize memory if needed
 		if (!this.memory.power) {
 			this.memory.power = 0;

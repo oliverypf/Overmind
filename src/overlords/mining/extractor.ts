@@ -1,13 +1,13 @@
-import {$} from '../../caching/GlobalCache';
-import {log} from '../../console/log';
-import {Roles, Setups} from '../../creepSetups/setups';
-import {DirectiveExtract} from '../../directives/resource/extract';
-import {Pathing} from '../../movement/Pathing';
-import {OverlordPriority} from '../../priorities/priorities_overlords';
-import {profile} from '../../profiler/decorator';
-import {Tasks} from '../../tasks/Tasks';
-import {Zerg} from '../../zerg/Zerg';
-import {Overlord} from '../Overlord';
+import { $ } from '../../caching/GlobalCache';
+import { log } from '../../console/log';
+import { Roles, Setups } from '../../creepSetups/setups';
+import { DirectiveExtract } from '../../directives/resource/extract';
+import { Pathing } from '../../movement/Pathing';
+import { OverlordPriority } from '../../priorities/priorities_overlords';
+import { profile } from '../../profiler/decorator';
+import { Tasks } from '../../tasks/Tasks';
+import { Zerg } from '../../zerg/Zerg';
+import { Overlord } from '../Overlord';
 
 const BUILD_OUTPUT_FREQUENCY = 15;
 
@@ -57,7 +57,7 @@ export class ExtractorOverlord extends Overlord {
 		if (this.container) {
 			if (_.sum(this.container.store) > 0.5 * this.container.storeCapacity ||
 				(_.sum(this.container.store) > 0 && this.drones.length == 0)) {
-				this.colony.logisticsNetwork.requestOutput(this.container, {resourceType: 'all'});
+				this.colony.logisticsNetwork.requestOutput(this.container, { resourceType: 'all' });
 			}
 		}
 	}
@@ -85,10 +85,13 @@ export class ExtractorOverlord extends Overlord {
 		// Create container if there is not already one being built and no link
 		if (!this.container) {
 			const containerSite = _.first(_.filter(this.pos.findInRange(FIND_MY_CONSTRUCTION_SITES, 2),
-												 site => site.structureType == STRUCTURE_CONTAINER));
+				site => site.structureType == STRUCTURE_CONTAINER));
 			if (!containerSite) {
 				const containerPos = this.calculateContainerPos();
 				log.info(`${this.print}: building container at ${containerPos.print}`);
+				if (Object.keys(Game.constructionSites).length >= 100) { // MAX_CONSTRUCTION_SITES
+					return;
+				}
 				const result = containerPos.createConstructionSite(STRUCTURE_CONTAINER);
 				if (result != OK) {
 					log.error(`${this.print}: cannot build container at ${containerPos.print}! Result: ${result}`);
@@ -115,7 +118,7 @@ export class ExtractorOverlord extends Overlord {
 				drone.task = Tasks.transferAll(this.container);
 				// Move onto the output container if you're the only drone
 				if (!drone.pos.isEqualTo(this.container.pos) && this.drones.length == 1) {
-					drone.goTo(this.container, {range: 0});
+					drone.goTo(this.container, { range: 0 });
 				}
 			}
 		} else {

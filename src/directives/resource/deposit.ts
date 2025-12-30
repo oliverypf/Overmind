@@ -1,8 +1,8 @@
-import {log} from '../../console/log';
-import {DepositMinerOverlord} from '../../overlords/mining/depositMiner';
-import {OverlordPriority} from '../../priorities/priorities_overlords';
-import {profile} from '../../profiler/decorator';
-import {Directive} from '../Directive';
+import { log } from '../../console/log';
+import { DepositMinerOverlord } from '../../overlords/mining/depositMiner';
+import { OverlordPriority } from '../../priorities/priorities_overlords';
+import { profile } from '../../profiler/decorator';
+import { Directive } from '../Directive';
 
 interface DirectiveDepositMemory extends FlagMemory {
 	depositType?: string; // DepositConstant in newer API
@@ -20,7 +20,7 @@ export class DirectiveDeposit extends Directive {
 
 	static directiveName = 'deposit';
 	static color = COLOR_YELLOW;
-	static secondaryColor = COLOR_CYAN;
+	static secondaryColor = COLOR_PURPLE;
 
 	memory: DirectiveDepositMemory;
 	overlords: {
