@@ -1,6 +1,6 @@
-import {log} from '../console/log';
-import {CombatIntel} from '../intel/CombatIntel';
-import {profile} from '../profiler/decorator';
+import { log } from '../console/log';
+import { CombatIntel } from '../intel/CombatIntel';
+import { profile } from '../profiler/decorator';
 
 /**
  * SafeMode trigger conditions
@@ -16,9 +16,9 @@ interface SafeModeTrigger {
  * SafeMode decision memory
  */
 interface SafeModeMemory {
-	lastTriggered: {[roomName: string]: number};
+	lastTriggered: { [roomName: string]: number };
 	triggers: SafeModeTrigger[];
-	cooldowns: {[roomName: string]: number};
+	cooldowns: { [roomName: string]: number };
 }
 
 const DEFAULT_SAFEMODE_MEMORY: SafeModeMemory = {
@@ -145,7 +145,7 @@ export class SafeModeManager {
 			// Calculate stored value
 			let storedValue = 0;
 			for (const resource in structure.store) {
-				const amount = structure.store[resource as ResourceConstant];
+				const amount = structure.store[resource as ResourceConstant] || 0;
 				// Energy is worth less, other resources worth more
 				if (resource === RESOURCE_ENERGY) {
 					storedValue += amount * 0.01;
@@ -310,13 +310,11 @@ export class SafeModeManager {
 			const trigger = this.evaluateRoom(room);
 
 			if (trigger) {
-				// Only auto-trigger for critical and high severity
-				if (trigger.severity === 'critical') {
+				// Auto-trigger for critical and high severity
+				if (trigger.severity === 'critical' || trigger.severity === 'high') {
 					this.triggerSafeMode(room, trigger);
-				} else if (trigger.severity === 'high') {
-					log.warning(`${room.name}: Safe mode recommended - ${trigger.type}`);
-					// Could auto-trigger here for high severity too
-					// this.triggerSafeMode(room, trigger);
+				} else if (trigger.severity === 'medium') {
+					log.warning(`${room.name}: Safe mode may be needed - ${trigger.type}`);
 				}
 			}
 		}

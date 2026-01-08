@@ -30,22 +30,23 @@ import './prototypes/Structures'; // Prototypes for accessed structures
 import './prototypes/Miscellaneous'; // Everything else
 import './tasks/initializer'; // This line is necessary to ensure proper compilation ordering...
 import './zerg/CombatZerg'; // ...so is this one... rollup is dumb about generating reference errors
-import {MUON, MY_USERNAME, RL_TRAINING_MODE, USE_PROFILER} from './~settings';
-import {sandbox} from './sandbox';
-import {Mem} from './memory/Memory';
-import {OvermindConsole} from './console/Console';
-import {Stats} from './stats/stats';
+import { MUON, MY_USERNAME, RL_TRAINING_MODE, USE_PROFILER } from './~settings';
+import { sandbox } from './sandbox';
+import { Mem } from './memory/Memory';
+import { OvermindConsole } from './console/Console';
+import { Stats } from './stats/stats';
 import profiler from './profiler/screeps-profiler';
 import _Overmind from './Overmind_obfuscated'; // this should be './Overmind_obfuscated' unless you are me
-import {VersionMigration} from './versionMigration/migrator';
-import {RemoteDebugger} from './debug/remoteDebugger';
-import {ActionParser} from './reinforcementLearning/actionParser';
-import {CpuBudgetManager} from './utilities/CpuBudgetManager';
-import {PowerCreepManager} from './power/PowerCreepManager';
-import {HighwayScoutManager} from './intel/HighwayScoutManager';
-import {DiplomacyManager} from './diplomacy/DiplomacyManager';
-import {EarlyWarningSystem} from './intel/EarlyWarningSystem';
-import {InvasionPredictor} from './intel/InvasionPredictor';
+import { VersionMigration } from './versionMigration/migrator';
+import { RemoteDebugger } from './debug/remoteDebugger';
+import { ActionParser } from './reinforcementLearning/actionParser';
+import { CpuBudgetManager } from './utilities/CpuBudgetManager';
+import { PowerCreepManager } from './power/PowerCreepManager';
+import { HighwayScoutManager } from './intel/HighwayScoutManager';
+import { DiplomacyManager } from './diplomacy/DiplomacyManager';
+import { EarlyWarningSystem } from './intel/EarlyWarningSystem';
+import { InvasionPredictor } from './intel/InvasionPredictor';
+import { SafeModeManager } from './strategy/SafeModeManager';
 // =====================================================================================================================
 
 // Main loop
@@ -71,8 +72,9 @@ function main(): void {
 	PowerCreepManager.run();										// Run PowerCreeps
 	DiplomacyManager.run();											// Run Diplomacy system
 	HighwayScoutManager.run();										// Scan highways for Power Banks and Deposits
-	EarlyWarningSystem.run();										// Monitor for incoming threats
-	InvasionPredictor.run();										// Analyze invasion patterns
+	EarlyWarningSystem.run();								// Monitor for incoming threats
+	InvasionPredictor.run();								// Analyze invasion patterns
+	SafeModeManager.run();									// Auto-trigger safe mode when critical
 
 	// Only render visuals when CPU budget allows (skip when bucket is low)
 	if (CpuBudgetManager.shouldRenderVisuals()) {

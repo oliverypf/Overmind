@@ -1,6 +1,6 @@
 // Room prototypes - commonly used room properties and methods
 
-import {MY_USERNAME} from '../~settings';
+import { MY_USERNAME } from '../~settings';
 
 // Logging =============================================================================================================
 Object.defineProperty(Room.prototype, 'print', {
@@ -96,8 +96,8 @@ Object.defineProperty(Room.prototype, 'playerHostiles', {
 	get() {
 		if (!this._playerHostiles) {
 			this._playerHostiles = _.filter(this.hostiles,
-											(creep: Creep) => creep.owner.username != 'Invader'
-															  && creep.owner.username != 'Source Keeper');
+				(creep: Creep) => creep.owner.username != 'Invader'
+					&& creep.owner.username != 'Source Keeper');
 		}
 		return this._playerHostiles;
 	},
@@ -109,15 +109,17 @@ Object.defineProperty(Room.prototype, 'dangerousHostiles', {
 		if (!this._dangerousHostiles) {
 			if (this.my) {
 				this._dangerousHostiles = _.filter(this.hostiles,
-												   (creep: Creep) => creep.getActiveBodyparts(ATTACK) > 0
-																	 || creep.getActiveBodyparts(WORK) > 0
-																	 || creep.getActiveBodyparts(RANGED_ATTACK) > 0
-																	 || creep.getActiveBodyparts(HEAL) > 0);
+					(creep: Creep) => creep.getActiveBodyparts(ATTACK) > 0
+						|| creep.getActiveBodyparts(WORK) > 0
+						|| creep.getActiveBodyparts(RANGED_ATTACK) > 0
+						|| creep.getActiveBodyparts(HEAL) > 0
+						|| creep.getActiveBodyparts(CLAIM) > 0);
 			} else {
 				this._dangerousHostiles = _.filter(this.hostiles,
-												   (creep: Creep) => creep.getActiveBodyparts(ATTACK) > 0
-																	 || creep.getActiveBodyparts(RANGED_ATTACK) > 0
-																	 || creep.getActiveBodyparts(HEAL) > 0);
+					(creep: Creep) => creep.getActiveBodyparts(ATTACK) > 0
+						|| creep.getActiveBodyparts(RANGED_ATTACK) > 0
+						|| creep.getActiveBodyparts(HEAL) > 0
+						|| creep.getActiveBodyparts(CLAIM) > 0);
 			}
 		}
 		return this._dangerousHostiles;
@@ -129,10 +131,11 @@ Object.defineProperty(Room.prototype, 'dangerousPlayerHostiles', {
 	get() {
 		if (!this._dangerousPlayerHostiles) {
 			this._dangerousPlayerHostiles = _.filter(this.playerHostiles,
-													 (c: Creep) => c.getActiveBodyparts(ATTACK) > 0
-																   || c.getActiveBodyparts(WORK) > 0
-																   || c.getActiveBodyparts(RANGED_ATTACK) > 0
-																   || c.getActiveBodyparts(HEAL) > 0);
+				(c: Creep) => c.getActiveBodyparts(ATTACK) > 0
+					|| c.getActiveBodyparts(WORK) > 0
+					|| c.getActiveBodyparts(RANGED_ATTACK) > 0
+					|| c.getActiveBodyparts(HEAL) > 0
+					|| c.getActiveBodyparts(CLAIM) > 0);
 		}
 		return this._dangerousPlayerHostiles;
 	},
@@ -144,10 +147,10 @@ Object.defineProperty(Room.prototype, 'fleeDefaults', {
 		if (!this._fleeDefaults) {
 			this._fleeDefaults = (<HasPos[]>[])
 				.concat(_.filter(this.hostiles,
-								 (c: Creep) => c.getActiveBodyparts(ATTACK) > 0
-											   || c.getActiveBodyparts(RANGED_ATTACK) > 0))
+					(c: Creep) => c.getActiveBodyparts(ATTACK) > 0
+						|| c.getActiveBodyparts(RANGED_ATTACK) > 0))
 				.concat(_.filter(this.keeperLairs,
-								 (l: StructureKeeperLair) => (l.ticksToSpawn || Infinity) <= 10));
+					(l: StructureKeeperLair) => (l.ticksToSpawn || Infinity) <= 10));
 		}
 		return this._fleeDefaults;
 	},
@@ -170,7 +173,7 @@ Object.defineProperty(Room.prototype, 'structures', {
 Object.defineProperty(Room.prototype, 'hostileStructures', {
 	get() {
 		if (!this._hostileStructures) {
-			this._hostileStructures = this.find(FIND_HOSTILE_STRUCTURES, {filter: (s: Structure) => s.hitsMax});
+			this._hostileStructures = this.find(FIND_HOSTILE_STRUCTURES, { filter: (s: Structure) => s.hitsMax });
 		}
 		return this._hostileStructures;
 	},

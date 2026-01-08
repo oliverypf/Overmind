@@ -35,15 +35,15 @@ export class WorkerOverlord extends Overlord {
 			critical: 25000,
 			1: 3e+3,
 			2: 3e+3,
-			3: 1e+4,
-			4: 5e+4,
-			5: 1e+5,
-			6: 5e+5,
+			3: 5e+4,    // Increased from 1e+4
+			4: 1e+5,    // Increased from 5e+4
+			5: 5e+5,    // Increased from 1e+5
+			6: 1e+6,    // Increased from 5e+5
 			7: 1e+6,
 			8: 2e+7,
 		},
 		hitTolerance: 100000, 	// allowable spread in HP
-		fortifyDutyThreshold: 500000,	// ignore fortify duties until this amount of energy is present in the room
+		fortifyDutyThreshold: 50000,	// Reduced from 500000 to allow early fortification
 	};
 
 	constructor(colony: Colony, priority = OverlordPriority.ownedRoom.work) {

@@ -1,6 +1,6 @@
-import {log} from '../console/log';
-import {profile} from '../profiler/decorator';
-import {Cartographer} from '../utilities/Cartographer';
+import { log } from '../console/log';
+import { profile } from '../profiler/decorator';
+import { Cartographer } from '../utilities/Cartographer';
 
 /**
  * Early Warning Memory
@@ -218,7 +218,13 @@ export class EarlyWarningSystem {
 		switch (threat.level) {
 			case 'critical':
 				log.alert(`🚨 CRITICAL THREAT to ${colony.print}: ${threatInfo}`);
-				// Consider activating safemode preparation
+				// Preemptively create defense directive
+				if (colony.controller) {
+					// Import is at runtime to avoid circular dependency
+					const { DirectiveInvasionDefense } = require('../directives/defense/invasionDefense');
+					DirectiveInvasionDefense.createIfNotPresent(colony.controller.pos, 'room');
+					log.info(`Preemptively activating invasion defense for ${colony.print}`);
+				}
 				if (colony.room.controller && colony.room.controller.safeModeAvailable > 0) {
 					log.info(`SafeMode available for ${colony.print} if needed`);
 				}
@@ -226,6 +232,11 @@ export class EarlyWarningSystem {
 
 			case 'high':
 				log.alert(`⚠️ HIGH THREAT to ${colony.print}: ${threatInfo}`);
+				// Also create defense directive for high threat
+				if (colony.controller) {
+					const { DirectiveInvasionDefense } = require('../directives/defense/invasionDefense');
+					DirectiveInvasionDefense.createIfNotPresent(colony.controller.pos, 'room');
+				}
 				break;
 
 			case 'medium':

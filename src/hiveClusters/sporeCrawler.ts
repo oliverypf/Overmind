@@ -138,9 +138,20 @@ export class SporeCrawler extends HiveCluster {
 				// Target if we can hurt it
 				if (damageTaken * damageMultiplier > healing) return true;
 
+				// Target if they are a dismantler (high priority threat)
+				if (hostile.getActiveBodyparts(WORK) > 0) return true;
+
+				// Target if they are close to critical structures
+				const closeToCritical = hostile.pos.findInRange([
+					...this.colony.spawns,
+					this.colony.storage,
+					this.colony.terminal
+				].filter(s => s) as any[], 5).length > 0;
+				if (closeToCritical) return true;
+
 				// Target if it's a significant threat or we have excess energy, even if we can't kill it immediately
 				// This applies pressure and drains their energy
-				if (this.towers[0].energy > TOWER_ENERGY_COST * 10) return true;
+				if (this.towers[0] && this.towers[0].energy > TOWER_ENERGY_COST * 5) return true;
 
 				return false;
 			});

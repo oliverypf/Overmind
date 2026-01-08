@@ -1,28 +1,28 @@
-import {Colony, ColonyStage} from './Colony';
-import {log} from './console/log';
-import {bodyCost} from './creepSetups/CreepSetup';
-import {Roles} from './creepSetups/setups';
-import {DirectiveClearRoom} from './directives/colony/clearRoom';
-import {DirectiveColonize} from './directives/colony/colonize';
-import {DirectiveOutpost} from './directives/colony/outpost';
-import {DirectiveGuard} from './directives/defense/guard';
-import {DirectiveInvasionDefense} from './directives/defense/invasionDefense';
-import {DirectiveOutpostDefense} from './directives/defense/outpostDefense';
-import {Directive} from './directives/Directive';
-import {Notifier} from './directives/Notifier';
-import {DirectiveBootstrap} from './directives/situational/bootstrap';
-import {DirectiveNukeResponse} from './directives/situational/nukeResponse';
-import {DirectiveTerminalEvacuateState} from './directives/terminalState/terminalState_evacuate';
-import {RoomIntel} from './intel/RoomIntel';
-import {LogisticsNetwork} from './logistics/LogisticsNetwork';
-import {Autonomy, getAutonomyLevel, Mem} from './memory/Memory';
-import {Pathing} from './movement/Pathing';
-import {Overlord} from './overlords/Overlord';
-import {profile} from './profiler/decorator';
-import {CombatPlanner} from './strategy/CombatPlanner';
-import {Cartographer, ROOMTYPE_CONTROLLER, ROOMTYPE_SOURCEKEEPER} from './utilities/Cartographer';
-import {derefCoords, hasJustSpawned, minBy, onPublicServer} from './utilities/utils';
-import {MUON, MY_USERNAME, USE_TRY_CATCH} from './~settings';
+import { Colony, ColonyStage } from './Colony';
+import { log } from './console/log';
+import { bodyCost } from './creepSetups/CreepSetup';
+import { Roles } from './creepSetups/setups';
+import { DirectiveClearRoom } from './directives/colony/clearRoom';
+import { DirectiveColonize } from './directives/colony/colonize';
+import { DirectiveOutpost } from './directives/colony/outpost';
+import { DirectiveGuard } from './directives/defense/guard';
+import { DirectiveInvasionDefense } from './directives/defense/invasionDefense';
+import { DirectiveOutpostDefense } from './directives/defense/outpostDefense';
+import { Directive } from './directives/Directive';
+import { Notifier } from './directives/Notifier';
+import { DirectiveBootstrap } from './directives/situational/bootstrap';
+import { DirectiveNukeResponse } from './directives/situational/nukeResponse';
+import { DirectiveTerminalEvacuateState } from './directives/terminalState/terminalState_evacuate';
+import { RoomIntel } from './intel/RoomIntel';
+import { LogisticsNetwork } from './logistics/LogisticsNetwork';
+import { Autonomy, getAutonomyLevel, Mem } from './memory/Memory';
+import { Pathing } from './movement/Pathing';
+import { Overlord } from './overlords/Overlord';
+import { profile } from './profiler/decorator';
+import { CombatPlanner } from './strategy/CombatPlanner';
+import { Cartographer, ROOMTYPE_CONTROLLER, ROOMTYPE_SOURCEKEEPER } from './utilities/Cartographer';
+import { derefCoords, hasJustSpawned, minBy, onPublicServer } from './utilities/utils';
+import { MUON, MY_USERNAME, USE_TRY_CATCH } from './~settings';
 
 
 // export const DIRECTIVE_CHECK_FREQUENCY = 2;
@@ -77,7 +77,7 @@ export class Overseer implements IOverseer {
 			} catch (e) {
 				if (identifier) {
 					e.name = `Caught unhandled exception at ${'' + callback} (identifier: ${identifier}): \n`
-							 + e.name + '\n' + e.stack;
+						+ e.name + '\n' + e.stack;
 				} else {
 					e.name = `Caught unhandled exception at ${'' + callback}: \n` + e.name + '\n' + e.stack;
 				}
@@ -160,7 +160,7 @@ export class Overseer implements IOverseer {
 			if (_.sum(tombstone.store) > LogisticsNetwork.settings.droppedEnergyThreshold
 				|| _.sum(tombstone.store) > tombstone.store.energy) {
 				if (colony.bunker && tombstone.pos.isEqualTo(colony.bunker.anchor)) continue;
-				colony.logisticsNetwork.requestOutput(tombstone, {resourceType: 'all'});
+				colony.logisticsNetwork.requestOutput(tombstone, { resourceType: 'all' });
 			}
 		}
 	}
@@ -194,7 +194,7 @@ export class Overseer implements IOverseer {
 			// Handle NPC invasion directives
 			if (Cartographer.roomType(room.name) != ROOMTYPE_SOURCEKEEPER) { // SK rooms can fend for themselves
 				const defenseFlags = _.filter(room.flags, flag => DirectiveGuard.filter(flag) ||
-																  DirectiveOutpostDefense.filter(flag));
+					DirectiveOutpostDefense.filter(flag));
 				if (room.dangerousHostiles.length > 0 && defenseFlags.length == 0) {
 					DirectiveGuard.create(room.dangerousHostiles[0].pos);
 				}
@@ -208,13 +208,13 @@ export class Overseer implements IOverseer {
 
 			// See if invasion is big enough to warrant creep defenses
 			const effectiveInvaderCount = _.sum(_.map(colony.room.hostiles,
-													invader => invader.boosts.length > 0 ? 2 : 1));
+				invader => invader.boosts.length > 0 ? 2 : 1));
 			const needsDefending = effectiveInvaderCount >= 3 || colony.room.dangerousPlayerHostiles.length > 0;
 
 			if (needsDefending) {
 				// Place defensive directive after hostiles have been present for a long enough time
 				const safetyData = RoomIntel.getSafetyData(colony.room.name);
-				const invasionIsPersistent = safetyData.unsafeFor > 20;
+				const invasionIsPersistent = safetyData.unsafeFor > 5;
 				if (invasionIsPersistent) {
 					DirectiveInvasionDefense.createIfNotPresent(colony.controller.pos, 'room');
 				}
@@ -237,7 +237,7 @@ export class Overseer implements IOverseer {
 				return false;
 			}
 			const alreadyAnOutpost = _.any(Overmind.cache.outpostFlags,
-										 flag => (flag.memory.setPosition || flag.pos).roomName == roomName);
+				flag => (flag.memory.setPosition || flag.pos).roomName == roomName);
 			const alreadyAColony = !!Overmind.colonies[roomName];
 			if (alreadyAColony || alreadyAnOutpost) {
 				return false;
@@ -256,16 +256,16 @@ export class Overseer implements IOverseer {
 
 	private handleNewOutposts(colony: Colony) {
 		const numSources = _.sum(colony.roomNames,
-							   roomName => Memory.rooms[roomName] && Memory.rooms[roomName][_RM.SOURCES]
-										   ? Memory.rooms[roomName][_RM.SOURCES]!.length
-										   : 0);
+			roomName => Memory.rooms[roomName] && Memory.rooms[roomName][_RM.SOURCES]
+				? Memory.rooms[roomName][_RM.SOURCES]!.length
+				: 0);
 		const numRemotes = numSources - colony.room.sources.length;
 		if (numRemotes < Colony.settings.remoteSourcesByLevel[colony.level]) {
 
 			const possibleOutposts = this.computePossibleOutposts(colony);
 
 			const origin = colony.pos;
-			const bestOutpost = minBy(possibleOutposts, function(roomName) {
+			const bestOutpost = minBy(possibleOutposts, function (roomName) {
 				if (!Memory.rooms[roomName]) return false;
 				const sourceCoords = Memory.rooms[roomName][_RM.SOURCES] as SavedSource[] | undefined;
 				if (!sourceCoords) return false;
@@ -280,7 +280,7 @@ export class Overseer implements IOverseer {
 			if (bestOutpost) {
 				const pos = Pathing.findPathablePosition(bestOutpost);
 				log.info(`Colony ${colony.room.print} now remote mining from ${pos.print}`);
-				DirectiveOutpost.createIfNotPresent(pos, 'room', {memory: {[_MEM.COLONY]: colony.name}});
+				DirectiveOutpost.createIfNotPresent(pos, 'room', { memory: { [_MEM.COLONY]: colony.name } });
 			}
 		}
 	}
@@ -312,13 +312,11 @@ export class Overseer implements IOverseer {
 	// Safe mode condition =============================================================================================
 
 	private handleSafeMode(colony: Colony): void {
-		if (colony.stage == ColonyStage.Larva && onPublicServer()) {
-			return;
-		}
+		// Removed Larva stage restriction - all colonies should be able to use safe mode
 		// Safe mode activates when there are dangerous player hostiles that can reach the spawn
 		const criticalStructures = _.compact([...colony.spawns,
-											  colony.storage,
-											  colony.terminal]) as Structure[];
+		colony.storage,
+		colony.terminal]) as Structure[];
 		for (const structure of criticalStructures) {
 			if (structure.hits < structure.hitsMax &&
 				structure.pos.findInRange(colony.room.dangerousPlayerHostiles, 2).length > 0) {
