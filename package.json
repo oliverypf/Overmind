@@ -40,6 +40,8 @@
     "@tensorflow/tfjs": "^1.1.2",
     "columnify": "1.5.4",
     "onnxjs": "^0.1.6",
-    "source-map": "0.7.3"
+    "screeps-api": "^1.16.1",
+    "source-map": "0.7.3",
+    "ws": "^8.19.0"
   }
 }

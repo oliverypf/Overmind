@@ -134,13 +134,9 @@ if (RL_TRAINING_MODE) {
 	// Use stripped version for training reinforcment learning model
 	_loop = main_RL;
 } else {
-	if (USE_PROFILER) {
-		// Wrap the main loop in the profiler
-		_loop = () => profiler.wrap(main);
-	} else {
-		// Use the default main loop
-		_loop = main;
-	}
+    // FORCE ENABLE PROFILER
+    profiler.enable();
+    _loop = () => profiler.wrap(main);
 }
 
 export const loop = _loop;

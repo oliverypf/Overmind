@@ -18,7 +18,7 @@ export const ERR_CANNOT_PUSH_CREEP = -30;
 const REPORT_CPU_THRESHOLD = 1000; 	// Report when creep uses more than this amount of CPU over lifetime
 const REPORT_SWARM_CPU_THRESHOLD = 1500;
 
-const DEFAULT_STUCK_VALUE = 2;		// Marked as stuck after this many ticks
+const DEFAULT_STUCK_VALUE = 5;		// Marked as stuck after this many ticks
 
 const STATE_PREV_X = 0;
 const STATE_PREV_Y = 1;
